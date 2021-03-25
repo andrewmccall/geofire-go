@@ -7,7 +7,7 @@ const BASE32_CHARS = "0123456789bcdefghjkmnpqrstuvwxyz"
 
 func ToBase32Char(value int) byte {
 	if value > len(BASE32_CHARS) {
-		panic("Not a valid BASE64")
+		panic("Not a valid BASE32 value")
 	}
 	return BASE32_CHARS[value]
 }
