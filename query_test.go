@@ -7,8 +7,8 @@ import (
 
 func createQuery(start string, end string) *GeoHashQuery {
 	return &GeoHashQuery{
-		startValue: start,
-		endValue:   end,
+		StartValue: start,
+		EndValue:   end,
 	}
 }
 
@@ -28,6 +28,17 @@ func assertEquals(expected *GeoHashQuery, query *GeoHashQuery, t *testing.T) {
 	if *query != *expected {
 		t.Errorf("Expected %v, was %v", query, expected)
 	}
+}
+
+func TestqueryForGeoHash(t *testing.T) {
+	assertEquals(createQuery("60", "6h"), queryForGeoHash("64m9yn96mx", 6), t)
+	assertEquals(createQuery("0", "h"), queryForGeoHash("64m9yn96mx", 1), t)
+	assertEquals(createQuery("64", "65"), queryForGeoHash("64m9yn96mx", 10), t)
+	assertEquals(createQuery("640", "64h"), queryForGeoHash("6409yn96mx", 11), t)
+	assertEquals(createQuery("64h", "64~"), queryForGeoHash("64m9yn96mx", 11), t)
+	assertEquals(createQuery("6", "6~"), queryForGeoHash("6", 10), t)
+	assertEquals(createQuery("64s", "64~"), queryForGeoHash("64z178", 12), t)
+	assertEquals(createQuery("64z", "64~"), queryForGeoHash("64z178", 15), t)
 }
 
 func TestCanJoinWith(t *testing.T) {

@@ -34,19 +34,19 @@ const EPSILON = 1e-12
 const MAX_PRECISION_BITS = 12
 
 type GeoHashQuery struct {
-	startValue string
-	endValue   string
+	StartValue string
+	EndValue   string
 }
 
 func (g *GeoHashQuery) isPrefix(other *GeoHashQuery) bool {
-	return (strings.Compare(other.endValue, g.startValue) >= 0) &&
-		(strings.Compare(other.startValue, g.startValue) < 0) &&
-		(strings.Compare(other.endValue, g.endValue) < 0)
+	return (strings.Compare(other.EndValue, g.StartValue) >= 0) &&
+		(strings.Compare(other.StartValue, g.StartValue) < 0) &&
+		(strings.Compare(other.EndValue, g.EndValue) < 0)
 }
 
 func (g *GeoHashQuery) isSuperQuery(other *GeoHashQuery) bool {
-	startCompare := strings.Compare(other.startValue, g.startValue)
-	return startCompare <= 0 && strings.Compare(other.endValue, g.endValue) >= 0
+	startCompare := strings.Compare(other.StartValue, g.StartValue)
+	return startCompare <= 0 && strings.Compare(other.EndValue, g.EndValue) >= 0
 }
 
 func (g *GeoHashQuery) canJoinWith(other *GeoHashQuery) bool {
@@ -56,13 +56,13 @@ func (g *GeoHashQuery) canJoinWith(other *GeoHashQuery) bool {
 func (g *GeoHashQuery) joinWith(other *GeoHashQuery) (*GeoHashQuery, error) {
 	if other.isPrefix(g) {
 		return &GeoHashQuery{
-			startValue: g.startValue,
-			endValue:   other.endValue,
+			StartValue: g.StartValue,
+			EndValue:   other.EndValue,
 		}, nil
 	} else if g.isPrefix(other) {
 		return &GeoHashQuery{
-			startValue: other.startValue,
-			endValue:   g.endValue,
+			StartValue: other.StartValue,
+			EndValue:   g.EndValue,
 		}, nil
 	} else if g.isSuperQuery(other) {
 		return other, nil
@@ -77,8 +77,8 @@ func queryForGeoHash(geoHash string, bits float64) *GeoHashQuery {
 	precision := int(math.Ceil(bits / BITS_PER_BASE32_CHAR))
 	if len(geoHash) < precision {
 		return &GeoHashQuery{
-			startValue: geoHash,
-			endValue:   geoHash + "~",
+			StartValue: geoHash,
+			EndValue:   geoHash + "~",
 		}
 	}
 	hash := geoHash[0:precision]
@@ -87,18 +87,18 @@ func queryForGeoHash(geoHash string, bits float64) *GeoHashQuery {
 	significantBits := bits - float64(len(base)*BITS_PER_BASE32_CHAR)
 	unusedBits := int(BITS_PER_BASE32_CHAR - significantBits)
 	// delete unused bits
-	startValue := (lastValue >> unusedBits) << unusedBits
-	endValue := startValue + (1 << unusedBits)
-	startHash := base + string(ToBase32Char(startValue))
+	StartValue := (lastValue >> unusedBits) << unusedBits
+	EndValue := StartValue + (1 << unusedBits)
+	startHash := base + string(ToBase32Char(StartValue))
 	var endHash string
-	if endValue > 31 {
+	if EndValue > 31 {
 		endHash = base + string('~')
 	} else {
-		endHash = base + string(ToBase32Char(endValue))
+		endHash = base + string(ToBase32Char(EndValue))
 	}
 	return &GeoHashQuery{
-		startValue: startHash,
-		endValue:   endHash,
+		StartValue: startHash,
+		EndValue:   endHash,
 	}
 }
 
