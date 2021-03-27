@@ -69,21 +69,21 @@ func TestJoinWith(t *testing.T) {
 	assertEquals(createQuery("abcd", "abcf"), createJoinedQueryForTest("abcd", "abce~", "abce", "abcf", t), t)
 	assertEquals(createQuery("abcd", "abcg"), createJoinedQueryForTest("abcd", "abcf", "abce", "abcg", t), t)
 
-	// try {
-	// 	createQuery("abcd", "abce").joinWith(createQuery("abcg", "abch"));
-	// 	Assert.fail("Exception was not thrown!");
-	// } catch(IllegalArgumentException expected) {
-	// }
+	_, err := createQuery("abcd", "abce").joinWith(createQuery("abcg", "abch"))
+	if err != nil {
+		log.Printf("Error not returned")
+		t.Fail()
+	}
 
-	// try {
-	// 	createQuery("abcd", "abce").joinWith(createQuery("dce", "dcf"));
-	// 	Assert.fail("Exception was not thrown!");
-	// } catch(IllegalArgumentException expected) {
-	// }
+	_, err2 := createQuery("abcd", "abce").joinWith(createQuery("dce", "dcf"))
+	if err2 != nil {
+		log.Printf("Error not returned")
+		t.Fail()
+	}
 
-	// try {
-	// 	createQuery("abc", "abd").joinWith(createQuery("dce", "dcf"));
-	// 	Assert.fail("Exception was not thrown!");
-	// } catch(IllegalArgumentException expected) {
-	// }
+	_, err3 := createQuery("abc", "abd").joinWith(createQuery("dce", "dcf"))
+	if err3 != nil {
+		log.Printf("Error not returned")
+		t.Fail()
+	}
 }

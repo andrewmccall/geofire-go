@@ -4,7 +4,7 @@ import (
 	"math"
 	"strings"
 
-	geohash "github.com/mmcloughlin/geohash"
+	"github.com/andrewmccall/geoutils"
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
@@ -118,17 +118,17 @@ func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[*GeoHashQue
 
 	queries := make(map[*GeoHashQuery]struct{})
 
-	geoHash := geohash.EncodeWithPrecision(latitude, longitude, geoHashPrecision)
-	geoHashW := geohash.EncodeWithPrecision(latitude, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
-	geoHashE := geohash.EncodeWithPrecision(latitude, wrapLongitude(longitude+longitudeDelta), geoHashPrecision)
+	geoHash, _ := geoutils.GeoHash(latitude, longitude, geoHashPrecision)
+	geoHashW, _ := geoutils.GeoHash(latitude, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
+	geoHashE, _ := geoutils.GeoHash(latitude, wrapLongitude(longitude+longitudeDelta), geoHashPrecision)
 
-	geoHashN := geohash.EncodeWithPrecision(latitudeNorth, longitude, geoHashPrecision)
-	geoHashNW := geohash.EncodeWithPrecision(latitudeNorth, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
-	geoHashNE := geohash.EncodeWithPrecision(latitudeNorth, wrapLongitude(longitude+longitudeDelta), geoHashPrecision)
+	geoHashN, _ := geoutils.GeoHash(latitudeNorth, longitude, geoHashPrecision)
+	geoHashNW, _ := geoutils.GeoHash(latitudeNorth, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
+	geoHashNE, _ := geoutils.GeoHash(latitudeNorth, wrapLongitude(longitude+longitudeDelta), geoHashPrecision)
 
-	geoHashS := geohash.EncodeWithPrecision(latitudeSouth, longitude, geoHashPrecision)
-	geoHashSW := geohash.EncodeWithPrecision(latitudeSouth, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
-	geoHashSE := geohash.EncodeWithPrecision(latitudeSouth, wrapLongitude(longitude+longitudeDelta), geoHashPrecision)
+	geoHashS, _ := geoutils.GeoHash(latitudeSouth, longitude, geoHashPrecision)
+	geoHashSW, _ := geoutils.GeoHash(latitudeSouth, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
+	geoHashSE, _ := geoutils.GeoHash(latitudeSouth, wrapLongitude(longitude+longitudeDelta), geoHashPrecision)
 
 	queries[queryForGeoHash(geoHash, queryBits)] = struct{}{}
 	queries[queryForGeoHash(geoHashE, queryBits)] = struct{}{}
