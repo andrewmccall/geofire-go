@@ -4,13 +4,23 @@ import (
 	"context"
 
 	firestore "cloud.google.com/go/firestore"
+	"github.com/andrewmccall/geoutils"
 	"google.golang.org/api/iterator"
 	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
 type GeoDocument struct {
 	geoHash  string         `firestore:"g,omitempty"`
-	Location *latlng.LatLng `firestore:"l,omitempty"`
+	location *latlng.LatLng `firestore:"l,omitempty"`
+}
+
+func (g *GeoDocument) SetLocation(loc *latlng.LatLng) {
+	g.location = loc
+	g.geoHash, _ = geoutils.GeoHash(loc.Latitude, loc.Longitude, DEFAULT_PRECISION)
+}
+
+func (g *GeoDocument) GetLocation() *latlng.LatLng {
+	return g.location
 }
 
 // GeoWhere runs a geo query against the collection.
@@ -29,16 +39,16 @@ func GeoWhere(ref *firestore.CollectionRef, location *latlng.LatLng, radius uint
 }
 
 type GeoDocumentIterator struct {
-	itr []*firestore.DocumentIterator
+	Location *latlng.LatLng
+	Radius   uint
+	itr      []*firestore.DocumentIterator
 }
 
 func (g *GeoDocumentIterator) Next() (*firestore.DocumentSnapshot, error) {
 	if len(g.itr) < 1 {
 		return nil, iterator.Done
 	}
-	// needs to iterate across each iterator, if one runs out move to the next.
-	// each document needs to be checked to be sure it's in the right range.
-	// return it.
+
 	di := g.itr[0]
 	ds, err := di.Next()
 
@@ -53,7 +63,14 @@ func (g *GeoDocumentIterator) Next() (*firestore.DocumentSnapshot, error) {
 		// finally recurse.
 		return g.Next()
 	}
-	// if we empty the whole thing, return iterator.Done
+
+	// check if we're in the right place.
+	gd := &GeoDocument{}
+	ds.DataTo(gd)
+	if uint(geoutils.CalculateDistance(gd.location.Latitude, gd.location.Longitude, g.Location.Latitude, g.Location.Longitude)) > g.Radius {
+		return g.Next()
+	}
+
 	return ds, nil
 }
 

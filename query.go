@@ -31,7 +31,9 @@ const EARTH_E2 = float64(0.00669447819799)
 
 const EPSILON = 1e-12
 
-const MAX_PRECISION_BITS = 12
+const DEFAULT_PRECISION = 10
+
+const MAX_PRECISION_BITS = 22
 
 type GeoHashQuery struct {
 	StartValue string
