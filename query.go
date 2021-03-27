@@ -1,7 +1,6 @@
 package geofire
 
 import (
-	"log"
 	"math"
 	"strings"
 
@@ -143,8 +142,6 @@ func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[GeoHashQuer
 	queries[*queryForGeoHash(geoHashSE, queryBits)] = struct{}{}
 	queries[*queryForGeoHash(geoHashSW, queryBits)] = struct{}{}
 
-	log.Printf("Joining %d queries...", len(queries))
-
 	// Join queries
 	for didJoin := true; didJoin; {
 		var query1 *GeoHashQuery = nil
@@ -165,7 +162,6 @@ func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[GeoHashQuer
 			joined, _ := query1.joinWith(query2)
 			queries[*joined] = struct{}{}
 			didJoin = true
-			log.Printf("Joined %v with %v as %v", query1, query2, joined)
 		} else {
 			didJoin = false
 		}

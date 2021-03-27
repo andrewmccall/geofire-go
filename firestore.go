@@ -23,15 +23,10 @@ func (g *GeoDocument) SetLocation(loc *latlng.LatLng) {
 // GeoWhere runs a geo query against the collection.
 func GeoWhere(ref *firestore.CollectionRef, location *latlng.LatLng, radius uint, ctx context.Context) *GeoDocumentIterator {
 
-	log.Printf("Constructing queries...")
-
 	queries := QueryiesAtLocation(location, float64(radius))
-
-	log.Printf("COnstructed %d queries", len(queries))
 
 	var iterators []*firestore.DocumentIterator
 	for query := range queries {
-		log.Printf("Running query %+v", query)
 		q := ref.OrderBy("g", firestore.Asc).StartAt(query.StartValue).EndAt(query.EndValue).Documents(ctx)
 		iterators = append(iterators, q)
 
@@ -51,6 +46,7 @@ type GeoDocumentIterator struct {
 
 func (g *GeoDocumentIterator) Next() (*firestore.DocumentSnapshot, error) {
 	if len(g.itr) < 1 {
+		log.Printf("All done.")
 		return nil, iterator.Done
 	}
 
@@ -72,9 +68,7 @@ func (g *GeoDocumentIterator) Next() (*firestore.DocumentSnapshot, error) {
 	// check if we're in the right place.
 	gd := &GeoDocument{}
 	ds.DataTo(gd)
-	log.Printf("Got %+v", gd)
 	dist := uint(geoutils.CalculateDistance(gd.Location.Latitude, gd.Location.Longitude, g.Location.Latitude, g.Location.Longitude))
-	log.Printf("Distance from search is %d", dist)
 	if dist > g.Radius {
 		return g.Next()
 	}
