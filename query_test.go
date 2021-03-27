@@ -1,6 +1,7 @@
 package geofire
 
 import (
+	"log"
 	"testing"
 )
 
@@ -24,7 +25,7 @@ func assertFalse(test bool, t *testing.T) {
 }
 
 func assertEquals(expected *GeoHashQuery, query *GeoHashQuery, t *testing.T) {
-	if &query != &expected {
+	if *query != *expected {
 		t.Errorf("Expected %v, was %v", query, expected)
 	}
 }
@@ -45,17 +46,28 @@ func TestCanJoinWith(t *testing.T) {
 	assertFalse(createQuery("abc", "abd").canJoinWith(createQuery("dce", "dcf")), t)
 }
 
+func createJoinedQueryForTest(s1 string, s2 string, s3 string, s4 string, t *testing.T) *GeoHashQuery {
+	q, err := createQuery(s1, s2).joinWith(createQuery(s3, s4))
+	if err != nil {
+		log.Printf("Error joining queries %s", err.Error())
+		t.Fail()
+	}
+	return q
+}
+
 func TestJoinWith(t *testing.T) {
 
-	assertEquals(createQuery("abcd", "abcf"), createQuery("abcd", "abce")).joinWith(createQuery("abce", "abcf")), t)
-	assertEquals(createQuery("abcd", "abcf"), createQuery("abce", "abcf").joinWith(createQuery("abcd", "abce")), t)
-	assertEquals(createQuery("abcd", "abcf"), createQuery("abcd", "abcf").joinWith(createQuery("abcd", "abce")), t)
-	assertEquals(createQuery("abcd", "abcf"), createQuery("abcd", "abcf").joinWith(createQuery("abce", "abcf")), t)
-	assertEquals(createQuery("abc", "abd"), createQuery("abc", "abd").joinWith(createQuery("abce", "abcf")), t)
-	assertEquals(createQuery("abc", "abd"), createQuery("abce", "abcf").joinWith(createQuery("abc", "abd")), t)
-	assertEquals(createQuery("abc", "abd"), createQuery("abcd", "abce~").joinWith(createQuery("abc", "abd")), t)
-	assertEquals(createQuery("abcd", "abcf"), createQuery("abcd", "abce~").joinWith(createQuery("abce", "abcf")), t)
-	assertEquals(createQuery("abcd", "abcg"), createQuery("abcd", "abcf").joinWith(createQuery("abce", "abcg")), t)
+	createQuery("abcd", "abce").joinWith(createQuery("abce", "abcf"))
+
+	assertEquals(createQuery("abcd", "abcf"), createJoinedQueryForTest("abcd", "abce", "abce", "abcf", t), t)
+	assertEquals(createQuery("abcd", "abcf"), createJoinedQueryForTest("abce", "abcf", "abcd", "abce", t), t)
+	assertEquals(createQuery("abcd", "abcf"), createJoinedQueryForTest("abcd", "abcf", "abcd", "abce", t), t)
+	assertEquals(createQuery("abcd", "abcf"), createJoinedQueryForTest("abcd", "abcf", "abce", "abcf", t), t)
+	assertEquals(createQuery("abc", "abd"), createJoinedQueryForTest("abc", "abd", "abce", "abcf", t), t)
+	assertEquals(createQuery("abc", "abd"), createJoinedQueryForTest("abce", "abcf", "abc", "abd", t), t)
+	assertEquals(createQuery("abc", "abd"), createJoinedQueryForTest("abcd", "abce~", "abc", "abd", t), t)
+	assertEquals(createQuery("abcd", "abcf"), createJoinedQueryForTest("abcd", "abce~", "abce", "abcf", t), t)
+	assertEquals(createQuery("abcd", "abcg"), createJoinedQueryForTest("abcd", "abcf", "abce", "abcg", t), t)
 
 	// try {
 	// 	createQuery("abcd", "abce").joinWith(createQuery("abcg", "abch"));
