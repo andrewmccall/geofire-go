@@ -1,6 +1,7 @@
 package geofire
 
 import (
+	"log"
 	"math"
 	"strings"
 
@@ -105,7 +106,7 @@ func queryForGeoHash(geoHash string, bits float64) *GeoHashQuery {
 }
 
 //GetQueryBounds returns the start and end values for the geohash bounds with a given radius.
-func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[*GeoHashQuery]struct{} {
+func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[GeoHashQuery]struct{} {
 	queryBits := math.Max(1, bitsForBoundingBox(location, radius))
 	geoHashPrecision := uint(math.Ceil(queryBits / BITS_PER_BASE32_CHAR))
 
@@ -118,7 +119,7 @@ func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[*GeoHashQue
 	longitudeDeltaSouth := distanceToLongitudeDegrees(radius, latitudeSouth)
 	longitudeDelta := math.Max(longitudeDeltaNorth, longitudeDeltaSouth)
 
-	queries := make(map[*GeoHashQuery]struct{})
+	queries := make(map[GeoHashQuery]struct{})
 
 	geoHash, _ := geoutils.GeoHash(latitude, longitude, geoHashPrecision)
 	geoHashW, _ := geoutils.GeoHash(latitude, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
@@ -132,15 +133,17 @@ func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[*GeoHashQue
 	geoHashSW, _ := geoutils.GeoHash(latitudeSouth, wrapLongitude(longitude-longitudeDelta), geoHashPrecision)
 	geoHashSE, _ := geoutils.GeoHash(latitudeSouth, wrapLongitude(longitude+longitudeDelta), geoHashPrecision)
 
-	queries[queryForGeoHash(geoHash, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashE, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashW, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashN, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashNE, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashNW, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashS, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashSE, queryBits)] = struct{}{}
-	queries[queryForGeoHash(geoHashSW, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHash, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashE, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashW, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashN, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashNE, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashNW, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashS, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashSE, queryBits)] = struct{}{}
+	queries[*queryForGeoHash(geoHashSW, queryBits)] = struct{}{}
+
+	log.Printf("Joining %d queries...", len(queries))
 
 	// Join queries
 	for didJoin := true; didJoin; {
@@ -148,20 +151,21 @@ func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[*GeoHashQue
 		var query2 *GeoHashQuery = nil
 		for query, _ := range queries {
 			for other, _ := range queries {
-				if &query != &other && query.canJoinWith(other) {
-					query1 = query
-					query2 = other
+				if query != other && query.canJoinWith(&other) {
+					query1 = &query
+					query2 = &other
 					break
 				}
 			}
 		}
 		if query1 != nil && query2 != nil {
 
-			delete(queries, query1)
-			delete(queries, query2)
+			delete(queries, *query1)
+			delete(queries, *query2)
 			joined, _ := query1.joinWith(query2)
-			queries[joined] = struct{}{}
+			queries[*joined] = struct{}{}
 			didJoin = true
+			log.Printf("Joined %v with %v as %v", query1, query2, joined)
 		} else {
 			didJoin = false
 		}

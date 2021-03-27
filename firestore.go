@@ -2,6 +2,7 @@ package geofire
 
 import (
 	"context"
+	"log"
 
 	firestore "cloud.google.com/go/firestore"
 	"github.com/andrewmccall/geoutils"
@@ -10,31 +11,35 @@ import (
 )
 
 type GeoDocument struct {
-	geoHash  string         `firestore:"g,omitempty"`
-	location *latlng.LatLng `firestore:"l,omitempty"`
+	GeoHash  string         `firestore:"g,omitempty"`
+	Location *latlng.LatLng `firestore:"l,omitempty"`
 }
 
 func (g *GeoDocument) SetLocation(loc *latlng.LatLng) {
-	g.location = loc
-	g.geoHash, _ = geoutils.GeoHash(loc.Latitude, loc.Longitude, DEFAULT_PRECISION)
-}
-
-func (g *GeoDocument) GetLocation() *latlng.LatLng {
-	return g.location
+	g.Location = loc
+	g.GeoHash, _ = geoutils.GeoHash(loc.Latitude, loc.Longitude, DEFAULT_PRECISION)
 }
 
 // GeoWhere runs a geo query against the collection.
 func GeoWhere(ref *firestore.CollectionRef, location *latlng.LatLng, radius uint, ctx context.Context) *GeoDocumentIterator {
+
+	log.Printf("Constructing queries...")
+
 	queries := QueryiesAtLocation(location, float64(radius))
+
+	log.Printf("COnstructed %d queries", len(queries))
+
 	var iterators []*firestore.DocumentIterator
 	for query := range queries {
-
+		log.Printf("Running query %+v", query)
 		q := ref.OrderBy("g", firestore.Asc).StartAt(query.StartValue).EndAt(query.EndValue).Documents(ctx)
 		iterators = append(iterators, q)
 
 	}
 	return &GeoDocumentIterator{
-		itr: iterators,
+		itr:      iterators,
+		Location: location,
+		Radius:   radius,
 	}
 }
 
@@ -67,7 +72,10 @@ func (g *GeoDocumentIterator) Next() (*firestore.DocumentSnapshot, error) {
 	// check if we're in the right place.
 	gd := &GeoDocument{}
 	ds.DataTo(gd)
-	if uint(geoutils.CalculateDistance(gd.location.Latitude, gd.location.Longitude, g.Location.Latitude, g.Location.Longitude)) > g.Radius {
+	log.Printf("Got %+v", gd)
+	dist := uint(geoutils.CalculateDistance(gd.Location.Latitude, gd.Location.Longitude, g.Location.Latitude, g.Location.Longitude))
+	log.Printf("Distance from search is %d", dist)
+	if dist > g.Radius {
 		return g.Next()
 	}
 
