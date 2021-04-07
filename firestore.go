@@ -3,6 +3,7 @@ package geofire
 import (
 	"context"
 	"log"
+	"sort"
 
 	firestore "cloud.google.com/go/firestore"
 	"github.com/andrewmccall/geoutils"
@@ -26,21 +27,16 @@ type GeoSearchResult struct {
 	Doc      *firestore.DocumentSnapshot
 }
 
-// ByDistance type provided for sorting search results
-type ByDistance []GeoSearchResult
+type GeoCollectionRef firestore.CollectionRef
 
-func (r ByDistance) Len() int           { return len(r) }
-func (r ByDistance) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r ByDistance) Less(i, j int) bool { return r[i].Distance < r[j].Distance }
-
-// GeoWhere runs a geo query against the collection.
-func GeoWhere(ref *firestore.CollectionRef, location *latlng.LatLng, radius uint, ctx context.Context) *GeoDocumentIterator {
+// GetAll documents in a collection within the given radius of a location returning an unordered GeoDocumentIterator.
+func (r *GeoCollectionRef) GetAll(location *latlng.LatLng, radius uint, ctx context.Context) *GeoDocumentIterator {
 
 	queries := QueryiesAtLocation(location, float64(radius))
 
 	var iterators []*firestore.DocumentIterator
 	for query := range queries {
-		q := ref.OrderBy("g", firestore.Asc).StartAt(query.StartValue).EndAt(query.EndValue).Documents(ctx)
+		q := r.OrderBy("g", firestore.Asc).StartAt(query.StartValue).EndAt(query.EndValue).Documents(ctx)
 		iterators = append(iterators, q)
 
 	}
@@ -50,6 +46,38 @@ func GeoWhere(ref *firestore.CollectionRef, location *latlng.LatLng, radius uint
 		Radius:   radius,
 	}
 }
+
+func (r *GeoCollectionRef) GetMax(location *latlng.LatLng, radius uint, max int, ctx context.Context) ByDistance {
+
+	d := r.GetAll(location, radius, ctx)
+	results := ByDistance(make([]GeoSearchResult, 0))
+	for {
+		c, err := d.Next()
+		if err != nil {
+			log.Printf("ERR %v", err)
+			break
+		}
+		if len(results) < max {
+			results = append(results, *c)
+			continue
+		}
+
+		if c.Distance < results[len(results)-1].Distance {
+			results[len(results)-1] = *c
+		}
+
+		sort.Sort(results)
+	}
+
+	return results
+}
+
+// ByDistance type provided for sorting search results
+type ByDistance []GeoSearchResult
+
+func (r ByDistance) Len() int           { return len(r) }
+func (r ByDistance) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ByDistance) Less(i, j int) bool { return r[i].Distance < r[j].Distance }
 
 type GeoDocumentIterator struct {
 	Location *latlng.LatLng
