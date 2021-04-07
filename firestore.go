@@ -26,6 +26,13 @@ type GeoSearchResult struct {
 	Doc      *firestore.DocumentSnapshot
 }
 
+// ByDistance type provided for sorting search results
+type ByDistance []GeoSearchResult
+
+func (r ByDistance) Len() int           { return len(r) }
+func (r ByDistance) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ByDistance) Less(i, j int) bool { return r[i].Distance < r[j].Distance }
+
 // GeoWhere runs a geo query against the collection.
 func GeoWhere(ref *firestore.CollectionRef, location *latlng.LatLng, radius uint, ctx context.Context) *GeoDocumentIterator {
 
