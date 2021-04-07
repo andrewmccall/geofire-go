@@ -104,6 +104,17 @@ func queryForGeoHash(geoHash string, bits float64) *GeoHashQuery {
 	}
 }
 
+func findJoinable(queries map[GeoHashQuery]struct{}) (*GeoHashQuery, *GeoHashQuery) {
+	for query, _ := range queries {
+		for other, _ := range queries {
+			if query != other && query.canJoinWith(&other) {
+				return &query, &other
+			}
+		}
+	}
+	return nil, nil
+}
+
 //GetQueryBounds returns the start and end values for the geohash bounds with a given radius.
 func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[GeoHashQuery]struct{} {
 	queryBits := math.Max(1, bitsForBoundingBox(location, radius))
@@ -144,17 +155,7 @@ func QueryiesAtLocation(location *latlng.LatLng, radius float64) map[GeoHashQuer
 
 	// Join queries
 	for didJoin := true; didJoin; {
-		var query1 *GeoHashQuery = nil
-		var query2 *GeoHashQuery = nil
-		for query, _ := range queries {
-			for other, _ := range queries {
-				if query != other && query.canJoinWith(&other) {
-					query1 = &query
-					query2 = &other
-					break
-				}
-			}
-		}
+		query1, query2 := findJoinable(queries)
 		if query1 != nil && query2 != nil {
 
 			delete(queries, *query1)

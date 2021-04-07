@@ -27,32 +27,47 @@ type GeoSearchResult struct {
 	Doc      *firestore.DocumentSnapshot
 }
 
-type GeoCollectionRef firestore.CollectionRef
+type GeoQuery struct {
+	baseQuery *firestore.Query
+	location  *latlng.LatLng
+	radius    uint
+}
 
-// GetAll documents in a collection within the given radius of a location returning an unordered GeoDocumentIterator.
-func (r *GeoCollectionRef) GetAll(location *latlng.LatLng, radius uint, ctx context.Context) *GeoDocumentIterator {
+func NewGeoQuery(baseQuery *firestore.Query, location *latlng.LatLng, radius uint) *GeoQuery {
+	return &GeoQuery{
+		baseQuery: baseQuery,
+		location:  location,
+		radius:    radius,
+	}
 
-	queries := QueryiesAtLocation(location, float64(radius))
+}
+
+func (q *GeoQuery) Documents(ctx context.Context) *GeoDocumentIterator {
+
+	queries := QueryiesAtLocation(q.location, float64(q.radius))
+
+	log.Printf("Running with base query %v", q.baseQuery)
 
 	var iterators []*firestore.DocumentIterator
 	for query := range queries {
-		q := r.OrderBy("g", firestore.Asc).StartAt(query.StartValue).EndAt(query.EndValue).Documents(ctx)
-		iterators = append(iterators, q)
-
+		exec := q.baseQuery.OrderBy("g", firestore.Asc).StartAt(query.StartValue).EndAt(query.EndValue)
+		iterators = append(iterators, exec.Documents(ctx))
 	}
 	return &GeoDocumentIterator{
 		itr:      iterators,
-		Location: location,
-		Radius:   radius,
+		Location: q.location,
+		Radius:   q.radius,
 	}
 }
 
-func (r *GeoCollectionRef) GetMax(location *latlng.LatLng, radius uint, max int, ctx context.Context) ByDistance {
+type GeoCollectionRef firestore.CollectionRef
 
-	d := r.GetAll(location, radius, ctx)
+// Closest documents
+func (iterator *GeoDocumentIterator) Closest(max int) ByDistance {
+
 	results := ByDistance(make([]GeoSearchResult, 0))
 	for {
-		c, err := d.Next()
+		c, err := iterator.Next()
 		if err != nil {
 			log.Printf("ERR %v", err)
 			break
@@ -105,11 +120,11 @@ func (g *GeoDocumentIterator) Next() (*GeoSearchResult, error) {
 		// finally recurse.
 		return g.Next()
 	}
-
 	// check if we're in the right place.
 	gd := &GeoSearchResult{}
 	ds.DataTo(gd)
 	gd.Doc = ds
+
 	dist := uint(geoutils.CalculateDistance(gd.Location.Latitude, gd.Location.Longitude, g.Location.Latitude, g.Location.Longitude))
 	gd.Distance = dist
 	if dist > g.Radius {
